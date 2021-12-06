@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import magic
 # import redis
 import hashlib
 import pathlib
@@ -27,6 +28,12 @@ if 'general' in config:
 if 'github' in config:
     api_token = config['github']['api_token']
 
+if 'cache' in config:
+    cache_expire = config['cache']['expire']
+else:
+    cache_expire = 86400
+    
+
 if 'ail' in config:
     ail_url = config['ail']['url']
     ail_key = config['ail']['apikey']
@@ -47,8 +54,8 @@ def download_and_unzip(url, extract_to=pathRepo):
     zipfile = ZipFile(BytesIO(http_response.read()))
     zipfile.extractall(path=extract_to)
 
-def pushToAil(file, json_api, nameFolder):
-    f = open(file, "r", encoding="cp850")
+def pushToAil(file, json_api, nameFolder, extension):
+    f = open(file, "r", encoding="utf-8")
     read_file = f.read()
     f.close()
 
@@ -68,7 +75,10 @@ def pushToAil(file, json_api, nameFolder):
 
     meta = dict()
     meta["github_repo:path_file"] = str(pathToFile)
-    meta["github_repo:file_size"] = os.path.getsize(file)
+    meta["github_repo:file_size"] = str(os.path.getsize(file))
+
+    if extension:
+        meta["github_repo:file_extention"] = extension
 
     meta["github_repo:id"] = str(json_api["id"])
     meta["github_repo:node_id"] = json_api["node_id"]
@@ -90,22 +100,36 @@ def pushToAil(file, json_api, nameFolder):
     json_test["data"] = data
     json_test["meta"] = meta
 
-    with open(pathProg + "json_test.json", "a") as write_file:
+    with open(os.path.join(pathProg, "json_test.json"), "a") as write_file:
         json.dump(json_test, write_file, indent=4)
 
     # pyail.feed_json_item(data, meta, source, source_uuid, default_encoding)
 
 
-def exploration(folder, json_api, nameFolder):
+def exploration(folder, json_api, nameFolder, nocache):
     for content in os.listdir(folder):
         chemin = os.path.join(folder, content)
-        if not os.path.isdir(chemin):
+        if os.path.isfile(chemin):
             hashFile = hashlib.sha1(open(chemin, 'rb').read()).hexdigest()
-            pushToAil(chemin, json_api, nameFolder)
-        else:
-            exploration(chemin, json_api, nameFolder)
 
-def api_process(json_api):
+            if not r.exists("file:{}".format(hashFile)):
+                if not nocache:
+                    r.set("file:{}".format(tweet.id), tweet.tweet)
+                    r.expire("file:{}".format(tweet.id), cache_expire)
+
+                type_file = magic.from_file(chemin, mime=True)
+                if type_file and type_file.split("/")[0] == "text":
+                    extension = ""
+                    try:
+                        extension = content.split(".")[1]
+                    except:
+                        pass
+                    # print("Magic Type : {}".format(magic.from_file(chemin, mime=True)))
+                    pushToAil(chemin, json_api, nameFolder, extension)
+        else:
+            exploration(chemin, json_api, nameFolder, nocache)
+
+def api_process(json_api, repo_name, commit):
     if "message" in json_api:
         if "Not Found" in json_api["message"]:
             print(f"[-] Repo not found: {repo_name}")
@@ -125,7 +149,7 @@ def api_process(json_api):
             response = requests.get(f"https://api.github.com/repos/{user}/{repo_name}")
             json_api = json.loads(response.content)
 
-            api_process(json_api)
+            api_process(json_api, repo_name, commit)
             return False
         return True
     return False
@@ -159,7 +183,7 @@ for repo in json_repo:
     response = requests.get(f"https://api.github.com/repos/{user}/{repo_name}")
     json_api = json.loads(response.content)
 
-    if not api_process(json_api):
+    if not api_process(json_api, repo_name, commit):
         if commit:
             pathToDL = os.path.join(pathRepo, f"{repo_name}-{commit}")
         elif branch:
@@ -168,6 +192,7 @@ for repo in json_repo:
             pathToDL = os.path.join(pathRepo, f"{repo_name}-{json_api['default_branch']}")
 
         if not os.path.isdir(pathToDL):
+            print("[+] Downloading...")
             if commit:
                 download_and_unzip(f"https://github.com/{user}/{repo_name}/archive/{commit}.zip")
             elif branch:
@@ -175,5 +200,6 @@ for repo in json_repo:
             else:
                 download_and_unzip(f"https://github.com/{user}/{repo_name}/archive/refs/heads/{json_api['default_branch']}.zip")
 
+        print("[+] Exploration of the Repository...")
         head, tail = os.path.split(pathToDL)
-        exploration(pathToDL, json_api, tail)
+        exploration(pathToDL, json_api, tail, args.nocache)
