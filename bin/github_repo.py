@@ -3,6 +3,7 @@ import json
 import time
 import magic
 import redis
+import shutil
 import hashlib
 import pathlib
 import argparse
@@ -16,7 +17,7 @@ from io import BytesIO
 from zipfile import ZipFile
 
 pathProg = pathlib.Path(__file__).parent.absolute()
-uuid = "1"
+uuid = "183f2812-db38-4935-b5da-ad03f94f118f"
 
 ## Config
 config = configparser.ConfigParser()
@@ -210,3 +211,6 @@ for repo in json_repo:
         print("[+] Exploration of the Repository...")
         head, tail = os.path.split(pathToDL)
         exploration(pathToDL, json_api, tail, args.nocache)
+
+    if args.nocache:
+        shutil.rmtree(pathRepo)
