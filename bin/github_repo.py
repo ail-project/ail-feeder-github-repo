@@ -2,7 +2,7 @@ import os
 import json
 import time
 import magic
-# import redis
+import redis
 import hashlib
 import pathlib
 import argparse
@@ -38,10 +38,10 @@ if 'ail' in config:
     ail_url = config['ail']['url']
     ail_key = config['ail']['apikey']
 
-"""if 'redis' in config:
+if 'redis' in config:
     r = redis.Redis(host=config['redis']['host'], port=config['redis']['port'], db=config['redis']['db'])
 else:
-    r = redis.Redis(host='localhost', port=6379, db=0)"""
+    r = redis.Redis(host='localhost', port=6379, db=0)
 
 pathRepo = os.path.join(pathProg, "Repo")
 if 'repo' in config:
@@ -114,8 +114,8 @@ def exploration(folder, json_api, nameFolder, nocache):
 
             if not r.exists("file:{}".format(hashFile)):
                 if not nocache:
-                    r.set("file:{}".format(tweet.id), tweet.tweet)
-                    r.expire("file:{}".format(tweet.id), cache_expire)
+                    r.set("file:{}".format(hashFile), hashFile)
+                    r.expire("file:{}".format(hashFile), cache_expire)
 
                 type_file = magic.from_file(chemin, mime=True)
                 if type_file and type_file.split("/")[0] == "text":
@@ -129,7 +129,7 @@ def exploration(folder, json_api, nameFolder, nocache):
         else:
             exploration(chemin, json_api, nameFolder, nocache)
 
-def api_process(json_api, repo_name, commit):
+def api_process(json_api, headers, repo_name, commit):
     if "message" in json_api:
         if "Not Found" in json_api["message"]:
             print(f"[-] Repo not found: {repo_name}")
@@ -139,7 +139,7 @@ def api_process(json_api, repo_name, commit):
             return True
         if "API rate limit exceeded" in json_api["message"]:
 
-            time_remain = datetime.datetime.fromtimestamp(int(response.headers['X-RateLimit-Reset'])).strftime('%Y-%m-%d %H:%M:%S')
+            time_remain = datetime.datetime.fromtimestamp(int(headers['X-RateLimit-Reset'])).strftime('%Y-%m-%d %H:%M:%S')
             time_remain = datetime.datetime.strptime(time_remain, "%Y-%m-%d %H:%M:%S")
             diff = abs(time_remain - datetime.datetime.now())
 
@@ -149,7 +149,7 @@ def api_process(json_api, repo_name, commit):
             response = requests.get(f"https://api.github.com/repos/{user}/{repo_name}")
             json_api = json.loads(response.content)
 
-            api_process(json_api, repo_name, commit)
+            api_process(json_api, headers, repo_name, commit)
             return False
         return True
     return False
@@ -180,10 +180,17 @@ for repo in json_repo:
     branch = repo["branch"]
 
     ## Get the default branch
-    response = requests.get(f"https://api.github.com/repos/{user}/{repo_name}")
+    header = {'Authorization': f'token {api_token}'}
+
+    try:
+        response = requests.get(f"https://api.github.com/repos/{user}/{repo_name}", headers=header)
+    except requests.exceptions.ConnectionError:
+        print("[-] Connection Error to GHArchive")
+        exit(-1)
+
     json_api = json.loads(response.content)
 
-    if not api_process(json_api, repo_name, commit):
+    if not api_process(json_api, response.headers, repo_name, commit):
         if commit:
             pathToDL = os.path.join(pathRepo, f"{repo_name}-{commit}")
         elif branch:
