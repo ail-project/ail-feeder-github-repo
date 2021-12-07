@@ -113,7 +113,7 @@ def exploration(folder, json_api, nameFolder, nocache):
         if os.path.isfile(chemin):
             hashFile = hashlib.sha1(open(chemin, 'rb').read()).hexdigest()
 
-            if not r.exists("file:{}".format(hashFile)):
+            if not r.exists("file:{}".format(hashFile)) or nocache:
                 if not nocache:
                     r.set("file:{}".format(hashFile), hashFile)
                     r.expire("file:{}".format(hashFile), cache_expire)
