@@ -1,8 +1,15 @@
 [
     {
         "user": "ail-project",
-        "repo_name": "ail-feeder-gharchive",
+        "repo_name": "ail-feeder-github-repo",
         "commit": "",
         "branch": ""
+    },
+    {
+        "user": "ahupp",
+        "repo_name": "python-magic",
+        "commit": "",
+        "branch": "libmagic-compat"
     }
+    
 ]

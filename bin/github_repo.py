@@ -61,9 +61,17 @@ def download_and_unzip(url, extract_to=pathRepo):
     zipfile.extractall(path=extract_to)
 
 def pushToAil(file, json_api, nameFolder, extension):
-    f = open(file, "r", encoding="utf-8")
-    read_file = f.read()
-    f.close()
+    try:
+        f = open(file, "r", encoding="utf-8")
+        read_file = f.read()
+        f.close()
+    except UnicodeDecodeError:
+        try:
+            f = open(file, "r", encoding="cp850")
+            read_file = f.read()
+            f.close()
+        except:
+            pass
 
     data = read_file
     default_encoding = 'UTF-8'

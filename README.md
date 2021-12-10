@@ -9,15 +9,17 @@ This AIL feeder is a generic software to extract informations from Github Reposi
 # Usage
 
 ~~~shell
-dacru@dacru:~/git/ail-feeder-github-repo/bin$ python3 github_repo.py --help
-usage: github_repo.py [-h] [--nocache] list_repo
-
-positional arguments:
-  list_repo   list of repo to analyse
+dacru@dacru:~/git/ail-feeder-github-repo/bin$ python3 github_repo.py --help  
+usage: github_repo.py [-h] -l LIST_REPO [--nocache] [-v] [-d]
 
 optional arguments:
-  -h, --help  show this help message and exit
-  --nocache   disable store of archive
+  -h, --help            show this help message and exit
+  -l LIST_REPO, --list_repo LIST_REPO
+                        list of repo to analyse
+  --nocache             disable store of repository
+  -v, --verbose         verbose, more display
+  -d, --debug           debug mode
+
 
 ~~~
 
@@ -41,8 +43,26 @@ Using the AIL API, `data` will be compress in gzip format and encode with base64
 # (main) Requirements
 
 - [PyAIL](https://github.com/ail-project/PyAIL)
+
 - [magic](https://github.com/ahupp/python-magic)
+
+  - For magic, according to your OS, some additional stuff need to be download.
+
+    - For Debian/Ubuntu:
+
+    ```
+    sudo apt-get install libmagic1
+    ```
+
+    - For Windows
+
+    ```
+    pip install python-magic-bin
+    ```
+
 - [redis](https://github.com/redis/redis-py)
+
+
 
 
 
@@ -70,6 +90,8 @@ Using the AIL API, `data` will be compress in gzip format and encode with base64
 
 
 
+
+
 ## Format list to process repository
 
 ~~~json
@@ -79,6 +101,12 @@ Using the AIL API, `data` will be compress in gzip format and encode with base64
         "repo_name": "ail-feeder-github-repo",
         "commit": "",
         "branch": ""
+    },
+    {
+        "user": "ahupp",
+        "repo_name": "python-magic",
+        "commit": "",
+        "branch": "libmagic-compat"
     }
 ]
 ~~~
