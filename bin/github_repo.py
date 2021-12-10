@@ -125,7 +125,7 @@ def exploration(folder, json_api, nameFolder, nocache, cpfile, cpPush):
                     r.expire("file:{}".format(hashFile), cache_expire)
 
                 type_file = magic.from_file(chemin, mime=True)
-                
+
                 # Push only text file
                 if type_file and type_file.split("/")[0] == "text":
                     extension = ""
@@ -174,7 +174,7 @@ def api_process(json_api, headers, repo_name, commit):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-l", "--list_repo", help="list of repo to analyse", required=True)
-parser.add_argument("--nocache", help="disable store of archive", action="store_true")
+parser.add_argument("--nocache", help="disable store of repository", action="store_true")
 parser.add_argument("-v", "--verbose", help="verbose, more display", action="store_true")
 parser.add_argument("-d", "--debug", help="debug mode", action="store_true")
 args = parser.parse_args()
@@ -243,9 +243,9 @@ for repo in json_repo:
                 continue
 
         print(f"[+] Exploration of Repository: {repo_name}")
-
         head, tail = os.path.split(pathToDL)
         cpfile, cpPush = exploration(pathToDL, json_api, tail, args.nocache, cpfile, cpPush)
+
         if verbose:
             print(f"\t[+] Numbers of file in repo: {cpfile}")
             print(f"\t[+] Numbers of file push to Ail: {cpPush}")
