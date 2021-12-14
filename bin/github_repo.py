@@ -1,3 +1,7 @@
+"""
+Github-Repo-feeder download repos and push each text file to Ail
+"""
+
 import os
 import json
 import time
@@ -53,6 +57,7 @@ if 'repo' in config:
 
 ## Function
 def download_and_unzip(url, extract_to=pathRepo):
+    """Downolad and unzip repository"""
     try:
         http_response = urlopen(url)
     except urllib.error.HTTPError:
@@ -60,7 +65,10 @@ def download_and_unzip(url, extract_to=pathRepo):
     zipfile = ZipFile(BytesIO(http_response.read()))
     zipfile.extractall(path=extract_to)
 
+
 def pushToAil(file, json_api, nameFolder, extension):
+    """Read file and create data to push to Ail"""
+
     try:
         f = open(file, "r", encoding="utf-8")
         read_file = f.read()
@@ -122,6 +130,8 @@ def pushToAil(file, json_api, nameFolder, extension):
 
 
 def exploration(folder, json_api, nameFolder, nocache, cpfile, cpPush):
+    """recursive method to explore all folder, if a file contains text then it will be push to Ail"""
+
     for content in os.listdir(folder):
         chemin = os.path.join(folder, content)
         if os.path.isfile(chemin):
@@ -151,6 +161,8 @@ def exploration(folder, json_api, nameFolder, nocache, cpfile, cpPush):
 
 
 def api_process(json_api, headers, repo_name, commit):
+    """Process for the response message of API"""
+
     if "message" in json_api:
         if "Not Found" in json_api["message"]:
             print(f"[-] Repo not found: {repo_name}")
@@ -179,93 +191,93 @@ def api_process(json_api, headers, repo_name, commit):
     return False
 
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-l", "--list_repo", help="list of repo to analyse", required=True)
+    parser.add_argument("--nocache", help="disable store of repository", action="store_true")
+    parser.add_argument("-v", "--verbose", help="verbose, more display", action="store_true")
+    parser.add_argument("-d", "--debug", help="debug mode", action="store_true")
+    args = parser.parse_args()
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-l", "--list_repo", help="list of repo to analyse", required=True)
-parser.add_argument("--nocache", help="disable store of repository", action="store_true")
-parser.add_argument("-v", "--verbose", help="verbose, more display", action="store_true")
-parser.add_argument("-d", "--debug", help="debug mode", action="store_true")
-args = parser.parse_args()
+    debug = args.debug
+    verbose = args.verbose
 
-debug = args.debug
-verbose = args.verbose
+    with open(args.list_repo, "r") as read_file:
+        json_repo = json.load(read_file)
 
-with open(args.list_repo, "r") as read_file:
-    json_repo = json.load(read_file)
+    if not os.path.isdir(pathRepo):
+        os.mkdir(pathRepo)
 
-if not os.path.isdir(pathRepo):
-    os.mkdir(pathRepo)
-
-## Ail
-if not debug:
-    try:
-        pyail = PyAIL(ail_url, ail_key, ssl=False)
-    except Exception as e:
-        # print(e)
-        print("\n\n[-] Error during creation of AIL instance")
-        exit(0)
-
-
-for repo in json_repo:
-    user = repo["user"]
-    repo_name = repo["repo_name"]
-    commit = repo["commit"]
-    branch = repo["branch"]
-
-    cpfile = 0
-    cpPush = 0
-
-    ## Get the default branch and Check if the repo is up
-    header = {'Authorization': f'token {api_token}'}
-
-    try:
-        response = requests.get(f"https://api.github.com/repos/{user}/{repo_name}", headers=header)
-    except requests.exceptions.ConnectionError:
-        print("[-] Connection Error to GHArchive")
-        exit(-1)
-
-    json_api = json.loads(response.content)
-
-    if not api_process(json_api, response.headers, repo_name, commit):
-        if commit:
-            pathToDL = os.path.join(pathRepo, f"{repo_name}-{commit}")
-        elif branch:
-            # Branch can have / in is name and after unzip became -
-            branchTemp = branch.replace("/", "-")
-            pathToDL = os.path.join(pathRepo, f"{repo_name}-{branchTemp}")
-        else:
-            pathToDL = os.path.join(pathRepo, f"{repo_name}-{json_api['default_branch']}")
-
-        if not os.path.isdir(pathToDL):
-            print("[+] Downloading...")
-            if commit:
-                error = download_and_unzip(f"https://github.com/{user}/{repo_name}/archive/{commit}.zip")
-            elif branch:
-                error = download_and_unzip(f"https://github.com/{user}/{repo_name}/archive/refs/heads/{branch}.zip")
-            else:
-                error = download_and_unzip(f"https://github.com/{user}/{repo_name}/archive/refs/heads/{json_api['default_branch']}.zip")
-            
-            # Branch or commit not exist
-            if error:
-                print(f"{error} for {repo_name}")
-                continue
-
-        print(f"[+] Exploration of Repository: {repo_name}")
-        head, tail = os.path.split(pathToDL)
-        cpfile, cpPush = exploration(pathToDL, json_api, tail, args.nocache, cpfile, cpPush)
-
-        if verbose:
-            print(f"\t[+] Numbers of file in repo: {cpfile}")
-            print(f"\t[+] Numbers of file push to Ail: {cpPush}")
-    else:
-        if debug:
-            print(response.text)
-
-    if args.nocache:
+    ## Ail
+    if not debug:
         try:
-            shutil.rmtree(pathRepo)
+            pyail = PyAIL(ail_url, ail_key, ssl=False)
         except Exception as e:
-            if not debug:
-                pass
+            # print(e)
+            print("\n\n[-] Error during creation of AIL instance")
+            exit(0)
+
+
+    for repo in json_repo:
+        user = repo["user"]
+        repo_name = repo["repo_name"]
+        commit = repo["commit"]
+        branch = repo["branch"]
+
+        cpfile = 0
+        cpPush = 0
+
+        ## Get the default branch and Check if the repo is up
+        header = {'Authorization': f'token {api_token}'}
+
+        try:
+            response = requests.get(f"https://api.github.com/repos/{user}/{repo_name}", headers=header)
+        except requests.exceptions.ConnectionError:
+            print("[-] Connection Error to GHArchive")
+            exit(-1)
+
+        json_api = json.loads(response.content)
+
+        if not api_process(json_api, response.headers, repo_name, commit):
+            if commit:
+                pathToDL = os.path.join(pathRepo, f"{repo_name}-{commit}")
+            elif branch:
+                # Branch can have / in is name and after unzip became -
+                branchTemp = branch.replace("/", "-")
+                pathToDL = os.path.join(pathRepo, f"{repo_name}-{branchTemp}")
             else:
-                print(e)
+                pathToDL = os.path.join(pathRepo, f"{repo_name}-{json_api['default_branch']}")
+
+            if not os.path.isdir(pathToDL):
+                print("[+] Downloading...")
+                if commit:
+                    error = download_and_unzip(f"https://github.com/{user}/{repo_name}/archive/{commit}.zip")
+                elif branch:
+                    error = download_and_unzip(f"https://github.com/{user}/{repo_name}/archive/refs/heads/{branch}.zip")
+                else:
+                    error = download_and_unzip(f"https://github.com/{user}/{repo_name}/archive/refs/heads/{json_api['default_branch']}.zip")
+                
+                # Branch or commit not exist
+                if error:
+                    print(f"{error} for {repo_name}")
+                    continue
+
+            print(f"[+] Exploration of Repository: {repo_name}")
+            head, tail = os.path.split(pathToDL)
+            cpfile, cpPush = exploration(pathToDL, json_api, tail, args.nocache, cpfile, cpPush)
+
+            if verbose:
+                print(f"\t[+] Numbers of file in repo: {cpfile}")
+                print(f"\t[+] Numbers of file push to Ail: {cpPush}")
+        else:
+            if debug:
+                print(response.text)
+
+        if args.nocache:
+            try:
+                shutil.rmtree(pathRepo)
+            except Exception as e:
+                if not debug:
+                    pass
+                else:
+                    print(e)
