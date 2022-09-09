@@ -123,7 +123,7 @@ def pushToAil(file, json_api, nameFolder, extension):
     json_test["meta"] = meta
 
     if debug:
-        with open(os.path.join(pathProg, "json_test.json"), "a") as write_file:
+        with open(os.path.join(pathProg, f"{nameFolder}.json"), "a") as write_file:
             json.dump(json_test, write_file, indent=4)
     else:
         pyail.feed_json_item(data, meta, source, source_uuid, default_encoding)
@@ -197,10 +197,37 @@ if __name__ == '__main__':
     parser.add_argument("--nocache", help="disable store of repository", action="store_true")
     parser.add_argument("-v", "--verbose", help="verbose, more display", action="store_true")
     parser.add_argument("-d", "--debug", help="debug mode", action="store_true")
+    parser.add_argument("-o", "--orgs", nargs="+", help="list of organisations")
     args = parser.parse_args()
 
     debug = args.debug
     verbose = args.verbose
+
+    if args.orgs:
+        header = {'Authorization': f'token {api_token}'}
+        for orga in args.orgs:
+
+            try:
+                response = requests.get(f"https://api.github.com/orgs/{orga}/repos?type=all", headers=header)
+            except requests.exceptions.ConnectionError:
+                print("[-] Connection Error to api github")
+                exit(-1)
+
+            json_api_org = json.loads(response.content)
+
+
+            with open(args.list_repo, "r") as read_file:
+                json_repo = json.load(read_file)
+
+            for repository in json_api_org:
+                json_repo.append({
+                    'user': orga,
+                    'repo_name': repository['name'],
+                    "commit": "",
+                    "branch": ""
+                })
+            with open(args.list_repo, "w") as write_file:
+                json.dump(json_repo, write_file, indent=4)
 
     with open(args.list_repo, "r") as read_file:
         json_repo = json.load(read_file)
