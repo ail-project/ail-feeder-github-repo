@@ -108,12 +108,25 @@ Using the AIL API, `data` will be compress in gzip format and encode with base64
         "commit": "",
         "branch": "libmagic-compat"
     }
-]
+] 
 ~~~
 
 
 
+## Download all repository from an organization
 
+If no `repo_name` is given, then the user is consider as an organization and all of is repository will be download
+
+~~~
+[
+	{
+        "user": "ail-project",
+        "repo_name": "",
+        "commit": "",
+        "branch": ""
+    }
+]
+~~~
 
 
 

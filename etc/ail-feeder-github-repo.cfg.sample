@@ -8,7 +8,7 @@ api_token = <YOURAPIKEY>
 expire = 86400
 
 [ail]
-url = https://127.0.0.1:7020/api/v1/import/json/item
+url = https://127.0.0.1:7000
 apikey = <YOURAPIKEY> 
 
 [redis]

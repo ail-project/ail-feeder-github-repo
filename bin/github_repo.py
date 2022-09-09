@@ -54,6 +54,8 @@ if 'repo' in config:
     if config['repo']['pathRepo']:
         pathRepo = config['repo']['pathRepo']
 
+header = {'Authorization': f'token {api_token}'}
+
 
 ## Function
 def download_and_unzip(url, extract_to=pathRepo):
@@ -191,43 +193,74 @@ def api_process(json_api, headers, repo_name, commit):
     return False
 
 
+def getRepo(user, repo_name, commit, branch, args):
+    cpfile = 0
+    cpPush = 0
+
+    ## Get the default branch and Check if the repo is up
+    try:
+        response = requests.get(f"https://api.github.com/repos/{user}/{repo_name}", headers=header)
+    except requests.exceptions.ConnectionError:
+        print("[-] Connection Error to GHArchive")
+        exit(-1)
+
+    json_api = json.loads(response.content)
+
+    if not api_process(json_api, response.headers, repo_name, commit):
+        if commit:
+            pathToDL = os.path.join(pathRepo, f"{repo_name}-{commit}")
+        elif branch:
+            # Branch can have / in is name and after unzip became -
+            branchTemp = branch.replace("/", "-")
+            pathToDL = os.path.join(pathRepo, f"{repo_name}-{branchTemp}")
+        else:
+            pathToDL = os.path.join(pathRepo, f"{repo_name}-{json_api['default_branch']}")
+
+        if not os.path.isdir(pathToDL):
+            print("[+] Downloading...")
+            if commit:
+                error = download_and_unzip(f"https://github.com/{user}/{repo_name}/archive/{commit}.zip")
+            elif branch:
+                error = download_and_unzip(f"https://github.com/{user}/{repo_name}/archive/refs/heads/{branch}.zip")
+            else:
+                error = download_and_unzip(f"https://github.com/{user}/{repo_name}/archive/refs/heads/{json_api['default_branch']}.zip")
+            
+            # Branch or commit not exist
+            if error:
+                print(f"{error} for {repo_name}")
+                return
+
+        print(f"[+] Exploration of Repository: {repo_name}")
+        head, tail = os.path.split(pathToDL)
+        cpfile, cpPush = exploration(pathToDL, json_api, tail, args.nocache, cpfile, cpPush)
+
+        if verbose:
+            print(f"\t[+] Numbers of file in repo: {cpfile}")
+            print(f"\t[+] Numbers of file push to Ail: {cpPush}")
+    else:
+        if debug:
+            print(response.text)
+
+    if args.nocache:
+        try:
+            shutil.rmtree(pathRepo)
+        except Exception as e:
+            if not debug:
+                pass
+            else:
+                print(e)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-l", "--list_repo", help="list of repo to analyse", required=True)
     parser.add_argument("--nocache", help="disable store of repository", action="store_true")
     parser.add_argument("-v", "--verbose", help="verbose, more display", action="store_true")
     parser.add_argument("-d", "--debug", help="debug mode", action="store_true")
-    parser.add_argument("-o", "--orgs", nargs="+", help="list of organisations")
     args = parser.parse_args()
 
     debug = args.debug
     verbose = args.verbose
-
-    if args.orgs:
-        header = {'Authorization': f'token {api_token}'}
-        for orga in args.orgs:
-
-            try:
-                response = requests.get(f"https://api.github.com/orgs/{orga}/repos?type=all", headers=header)
-            except requests.exceptions.ConnectionError:
-                print("[-] Connection Error to api github")
-                exit(-1)
-
-            json_api_org = json.loads(response.content)
-
-
-            with open(args.list_repo, "r") as read_file:
-                json_repo = json.load(read_file)
-
-            for repository in json_api_org:
-                json_repo.append({
-                    'user': orga,
-                    'repo_name': repository['name'],
-                    "commit": "",
-                    "branch": ""
-                })
-            with open(args.list_repo, "w") as write_file:
-                json.dump(json_repo, write_file, indent=4)
 
     with open(args.list_repo, "r") as read_file:
         json_repo = json.load(read_file)
@@ -251,60 +284,21 @@ if __name__ == '__main__':
         commit = repo["commit"]
         branch = repo["branch"]
 
-        cpfile = 0
-        cpPush = 0
-
-        ## Get the default branch and Check if the repo is up
-        header = {'Authorization': f'token {api_token}'}
-
-        try:
-            response = requests.get(f"https://api.github.com/repos/{user}/{repo_name}", headers=header)
-        except requests.exceptions.ConnectionError:
-            print("[-] Connection Error to GHArchive")
-            exit(-1)
-
-        json_api = json.loads(response.content)
-
-        if not api_process(json_api, response.headers, repo_name, commit):
-            if commit:
-                pathToDL = os.path.join(pathRepo, f"{repo_name}-{commit}")
-            elif branch:
-                # Branch can have / in is name and after unzip became -
-                branchTemp = branch.replace("/", "-")
-                pathToDL = os.path.join(pathRepo, f"{repo_name}-{branchTemp}")
-            else:
-                pathToDL = os.path.join(pathRepo, f"{repo_name}-{json_api['default_branch']}")
-
-            if not os.path.isdir(pathToDL):
-                print("[+] Downloading...")
-                if commit:
-                    error = download_and_unzip(f"https://github.com/{user}/{repo_name}/archive/{commit}.zip")
-                elif branch:
-                    error = download_and_unzip(f"https://github.com/{user}/{repo_name}/archive/refs/heads/{branch}.zip")
-                else:
-                    error = download_and_unzip(f"https://github.com/{user}/{repo_name}/archive/refs/heads/{json_api['default_branch']}.zip")
-                
-                # Branch or commit not exist
-                if error:
-                    print(f"{error} for {repo_name}")
-                    continue
-
-            print(f"[+] Exploration of Repository: {repo_name}")
-            head, tail = os.path.split(pathToDL)
-            cpfile, cpPush = exploration(pathToDL, json_api, tail, args.nocache, cpfile, cpPush)
-
-            if verbose:
-                print(f"\t[+] Numbers of file in repo: {cpfile}")
-                print(f"\t[+] Numbers of file push to Ail: {cpPush}")
+        if repo_name:
+            getRepo(user, repo_name, commit, branch, args)
         else:
-            if debug:
-                print(response.text)
-
-        if args.nocache:
+            
             try:
-                shutil.rmtree(pathRepo)
-            except Exception as e:
-                if not debug:
-                    pass
-                else:
-                    print(e)
+                response = requests.get(f"https://api.github.com/orgs/{user}/repos?type=all", headers=header)
+            except requests.exceptions.ConnectionError:
+                print("[-] Connection Error to api github")
+                exit(-1)
+
+            json_api_org = json.loads(response.content)
+
+            if 'message' in json_api_org:
+                print("[-] Organization not found")
+                exit(-1)
+
+            for repository in json_api_org:
+                getRepo(user, repository['name'], '', '', args)
