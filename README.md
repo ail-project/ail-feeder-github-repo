@@ -129,4 +129,13 @@ If no `repo_name` is given, then the user is consider as an organization and all
 ~~~
 
 
+## License
+
+
+This software is licensed under [GNU Affero General Public License version 3](http://www.gnu.org/licenses/agpl-3.0.html)
+
+Copyright (C) 2021-2023 CIRCL - Computer Incident Response Center Luxembourg
+
+Copyright (C) 2021-2023 David Cruciani
+
 
