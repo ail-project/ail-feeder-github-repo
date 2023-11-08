@@ -26,7 +26,7 @@ uuid = "183f2812-db38-4935-b5da-ad03f94f118f"
 
 ## Config
 config = configparser.ConfigParser()
-config.read('../etc/ail-feeder-github-repo.cfg')
+config.read(os.path.join(pathProg, '../etc/ail-feeder-github-repo.cfg'))
 
 if 'general' in config:
     uuid = config['general']['uuid']
