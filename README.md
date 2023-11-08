@@ -1,9 +1,6 @@
 # AIL - feeder from Github Repository
 
-This AIL feeder is a generic software to extract informations from Github Repository, collect and feed AIL via AIL ReST API.
-
-
-
+This AIL feeder is a generic piece of software to extract information from Github Repositories to collect and feed AIL via its ReST API.
 
 
 # Usage
@@ -19,12 +16,7 @@ optional arguments:
   --nocache             disable store of repository
   -v, --verbose         verbose, more display
   -d, --debug           debug mode
-
-
 ~~~
-
-
-
 
 
 # JSON output format to AIL
@@ -34,10 +26,7 @@ optional arguments:
 - `data` is data in file
 - `meta` is the generic field where feeder can add the metadata collected
 
-
-
-Using the AIL API, `data` will be compress in gzip format and encode with base64 procedure. Then a new field will created, `data-sha256` who will be the result of sha256 on data after treatment.
-
+Using the AIL API, `data` will be compressed in gzip format and encoded in base64. Then a new field will be created, `data-sha256` which will be the result of sha256 on data after treatment.
 
 
 # (main) Requirements
@@ -46,7 +35,7 @@ Using the AIL API, `data` will be compress in gzip format and encode with base64
 
 - [magic](https://github.com/ahupp/python-magic)
 
-  - For magic, according to your OS, some additional stuff need to be download.
+  - For magic, according to your OS, some additional dependecies need to be installed.
 
     - For Debian/Ubuntu:
 
@@ -60,10 +49,13 @@ Using the AIL API, `data` will be compress in gzip format and encode with base64
     pip install python-magic-bin
     ```
 
+    - For MacOS
+
+    ```
+    brew install libmagic
+    ```
+
 - [redis](https://github.com/redis/redis-py)
-
-
-
 
 
 ## ail_feeder_github_repo
@@ -89,9 +81,6 @@ Using the AIL API, `data` will be compress in gzip format and encode with base64
 ~~~
 
 
-
-
-
 ## Format list to process repository
 
 ~~~json
@@ -110,7 +99,6 @@ Using the AIL API, `data` will be compress in gzip format and encode with base64
     }
 ] 
 ~~~
-
 
 
 ## Download all repository from an organization
@@ -135,7 +123,4 @@ If no `repo_name` is given, then the user is consider as an organization and all
 This software is licensed under [GNU Affero General Public License version 3](http://www.gnu.org/licenses/agpl-3.0.html)
 
 Copyright (C) 2021-2023 CIRCL - Computer Incident Response Center Luxembourg
-
 Copyright (C) 2021-2023 David Cruciani
-
-
